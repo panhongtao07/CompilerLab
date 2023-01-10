@@ -1,3 +1,7 @@
+# Project Specific
+/build
+*_local*
+
 # Prerequisites
 *.d
 
