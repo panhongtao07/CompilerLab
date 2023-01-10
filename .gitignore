@@ -1,6 +1,7 @@
 # Project Specific
 /build
-*_local*
+*local*
+*_l.*
 
 # Prerequisites
 *.d
@@ -34,3 +35,11 @@
 *.exe
 *.out
 *.app
+
+# OS generated files #
+.DS_Store?
+
+# IDE configs #
+.vscode/
+.idea/
+.clang-format
