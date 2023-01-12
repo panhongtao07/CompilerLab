@@ -10,8 +10,9 @@ class BaseAST {
 public:
     virtual ~BaseAST() = default;
     virtual std::ostream& dump(std::ostream& o = std::cout) const = 0;
+    virtual std::ostream& compile(std::ostream& o = std::cout) const = 0;
     friend std::ostream& operator<<(std::ostream& o, const BaseAST& a) {
-        return a.dump(o);
+        return a.compile(o);
     }
 };
 
@@ -21,6 +22,9 @@ public:
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "CU {" << *func_def << "}";
+    }
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        return o << *func_def;
     }
 };
 
@@ -34,6 +38,10 @@ public:
         return o << "FD {" << *func_type << ", " << identifier << ", " << *block
                  << "}";
     }
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        o << "fun @" << identifier << *func_type << " {" << std::endl;
+        return o << *block << "}" << std::endl;
+    }
 };
 
 class FuncTypeAST : public BaseAST {
@@ -42,6 +50,12 @@ public:
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "FT {" << identifier << "}";
+    }
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        o << "()";
+        if (!identifier.empty())
+            o << ": i32";
+        return o;
     }
 };
 
@@ -52,6 +66,9 @@ public:
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "B {" << *statement << "}";
     }
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        return o << "%entry:" << std::endl << *statement;
+    }
 };
 
 class StmtAST : public BaseAST {
@@ -59,6 +76,9 @@ public:
     int number;
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "return " << number << ";";
+    }
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        return o << "ret " << number << std::endl;
     }
 };
 #endif
