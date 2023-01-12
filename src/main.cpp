@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <string>
 #include "AST_SysY.h"
@@ -29,6 +30,11 @@ int main(int argc, const char *argv[]) {
     unique_ptr<BaseAST> ast;
     auto ret = yyparse(ast);
     assert(!ret);
+
+    if (output) {
+        ofstream ofs(output);
+        ofs << *ast << endl;
+    }
 
     // 输出解析得到的 AST, 其实就是个字符串
     cout << *ast << endl;
