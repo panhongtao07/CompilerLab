@@ -64,6 +64,10 @@ CPPFLAGS = $(INC_FLAGS) -MMD -MP
 
 
 # Main target
+all: build clean_internal
+
+build: $(BUILD_DIR)/$(TARGET_EXEC)
+
 $(BUILD_DIR)/$(TARGET_EXEC): $(FB_SRCS) $(OBJS)
 	$(CXX) $(OBJS) $(LDFLAGS) -lpthread -ldl -o $@
 
@@ -96,6 +100,9 @@ $(BUILD_DIR)/%.tab$(FB_EXT): $(SRC_DIR)/%.y
 
 
 .PHONY: clean
+
+clean_internal:
+	-rm -rf $(BUILD_DIR)/*.o $(BUILD_DIR)/*.d
 
 clean:
 	-rm -rf $(BUILD_DIR)
