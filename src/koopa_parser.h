@@ -18,6 +18,12 @@ public:
     void Visit(const koopa_raw_function_t &);
     void Visit(const koopa_raw_basic_block_t &);
     void Visit(const koopa_raw_value_t &);
+
+    void Compile(const koopa_raw_program_t &);
+    void Compile(const koopa_raw_slice_t &);
+    void Compile(const koopa_raw_function_t &);
+    void Compile(const koopa_raw_basic_block_t &);
+    void Compile(const koopa_raw_value_t &);
 };
 
 #endif

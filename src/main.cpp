@@ -79,6 +79,10 @@ int main(int argc, const char *argv[]) {
         KoopaParser(cout).Visit(raw);
     }
 
+    // 第二步：将 raw program 转换为 RISC-V 汇编代码
+    // 生成 RISCV 汇编代码
+    parser.Compile(raw);
+
     // 处理完成, 释放 raw program builder 占用的内存
     // 注意, raw program 中所有的指针指向的内存均为 raw program builder 的内存
     // 所以不要在 raw program 处理完毕之前释放 builder
