@@ -55,7 +55,7 @@ using namespace std;
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block Stmt
-%type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp Number
+%type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
 
 %%
@@ -116,7 +116,7 @@ Stmt
     ;
 
 Exp
-    : EqExp         { $$ = $1; }
+    : LOrExp        { $$ = $1; }
     ;
 
 PrimaryExp
@@ -176,6 +176,26 @@ EqExp
 EqOp
     : '!' '='   { $$ = (int)BinaryAST::Type::Ne; }
     | '=' '='   { $$ = (int)BinaryAST::Type::Eq; }
+    ;
+
+LAndExp
+    : EqExp         { $$ = $1; }
+    | LAndExp '&' '&' EqExp {
+        ExpAST *l, *r;
+        return_binary(BinaryAST::Type::Ne, new ValueAST(0), $1, l);
+        return_binary(BinaryAST::Type::Ne, new ValueAST(0), $4, r);
+        return_binary(BinaryAST::Type::And, l, r, $$);
+    }
+    ;
+
+LOrExp
+    : LAndExp       { $$ = $1; }
+    | LOrExp '|' '|' LAndExp {
+        ExpAST *l, *r;
+        return_binary(BinaryAST::Type::Ne, new ValueAST(0), $1, l);
+        return_binary(BinaryAST::Type::Ne, new ValueAST(0), $4, r);
+        return_binary(BinaryAST::Type::Or, l, r, $$);
+    }
     ;
 
 Number
