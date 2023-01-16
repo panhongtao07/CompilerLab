@@ -24,8 +24,9 @@ int main(int argc, const char *argv[]) {
     auto input = argv[2];
     auto output = argv[4];
 
-    assert(mode[1] == 'k' || mode[1] == 'r' || mode[1] == 'p' || mode[1] == 'v');
-    auto k2r = (mode[1] != 'k');
+    assert(mode[1] == 'k' || mode[1] == 'r' || mode[1] == 'p' ||
+           mode[1] == 'v' || mode[1] == 'd');
+    auto k2r = (mode[1] != 'k' && mode[1] != 'd');
 
     // 打开输入文件, 并且指定 lexer 在解析的时候读取这个文件
     yyin = fopen(input, "r");
@@ -38,7 +39,12 @@ int main(int argc, const char *argv[]) {
 
     // 使用 ss 可能导致更大的内存代价, 但能减少时间代价并防止输出不一致
     stringstream ss;
-    ss << *ast << endl;
+    if (mode[1] == 'd') {
+        ast->dump(ss);
+    } else {
+        ast->compile(ss);
+    }
+    ss << endl;
     auto s = ss.str();
 
     // 第一阶段: 将 SysY 代码转换为 Koopa IR
