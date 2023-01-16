@@ -55,7 +55,8 @@ using namespace std;
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block Stmt
-%type <exp_val> Number
+%type <exp_val> Exp PrimaryExp UnaryExp Number
+%type <int_val> UnaryOp
 
 %%
 
@@ -112,6 +113,26 @@ Stmt
         ast->set_expr($2);
         $$ = ast;
     }
+    ;
+
+Exp
+    : UnaryExp      { $$ = $1; }
+    ;
+
+PrimaryExp
+    : '(' Exp ')'   { $$ = $2; }
+    | Number        { $$ = $1; }
+    ;
+
+UnaryExp
+    : PrimaryExp    { $$ = $1; }
+    | UnaryOp UnaryExp { return_binary($1, new ValueAST(0), $2, $$); }
+    ;
+
+UnaryOp
+    : '+' { $$ = (int)BinaryAST::Type::Add; }
+    | '-' { $$ = (int)BinaryAST::Type::Sub; }
+    | '!' { $$ = (int)BinaryAST::Type::Eq; }
     ;
 
 Number
