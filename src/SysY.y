@@ -14,6 +14,15 @@
 #include <string>
 #include "AST_SysY.h"
 
+#define return_binary(op, l, r, res) \
+    do { \
+        auto exp = new BinaryAST(); \
+        exp->type = (BinaryAST::Type)op; \
+        exp->set_left(l); \
+        exp->set_right(r); \
+        res = exp; \
+    } while (0)
+
 // 声明 lexer 函数和错误处理函数
 int yylex();
 void yyerror(std::unique_ptr<BaseAST> &ast, const char *s);
@@ -33,6 +42,7 @@ using namespace std;
     std::string *str_val;
     int int_val;
     BaseAST *ast_val;
+    ExpAST *exp_val;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -45,7 +55,7 @@ using namespace std;
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block Stmt
-%type <int_val> Number
+%type <exp_val> Number
 
 %%
 
@@ -68,7 +78,7 @@ CompUnit
     ;
 
 // 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
-// $$ 表示非终结符的返回值, 我们可以通过给这个符号赋值的方法来返回结果
+// $$ 表示非终结符的值, 我们可以通过给这个符号赋值的方法来返回结果, 但不会生成return语句
 // unique_ptr 可以用来避免内存泄漏, 减少内存管理的负担
 FuncDef
     : FuncType IDENTIFIER '(' ')' Block {
@@ -97,16 +107,16 @@ Block
     ;
 
 Stmt
-    : RETURN Number ';' {
-        auto ast = new StmtAST();
-        ast->number = $2;
+    : RETURN Exp ';' {
+        auto ast = new ReturnAST();
+        ast->set_expr($2);
         $$ = ast;
     }
     ;
 
 Number
     : INT_CONST {
-        $$ = $1;
+        $$ = new ValueAST($1);
     }
     ;
 
