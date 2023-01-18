@@ -253,12 +253,19 @@ public:
     std::ostream& dump(std::ostream& o = std::cout) const override {
         assert(type != Type::Undef);
         assert(result);
+        if (result->type == ValueAST::Type::Num) {
+            return o << *result;
+        }
         return o << get_type_str() << " {" << *l_val << ", " << *r_val << "}";
     }
 
     std::ostream& compile(std::ostream& o = std::cout) const override {
         assert(type != Type::Undef);
         assert(result);
+        // 如果已经是常量, 则不需要生成指令
+        if (result->type == ValueAST::Type::Num) {
+            return o;
+        }
         // 先生成子表达式
         prepare_expr(l_val);
         prepare_expr(r_val);
@@ -269,9 +276,39 @@ public:
     }
 
     void set_value_as_temp() override {
+        // 如果已经计算出常量, 返回
+        if (result != nullptr && result->type == ValueAST::Type::Num) {
+            return;
+        }
+        // 等待子节点计算常量
         l_val->set_value_as_temp();
         r_val->set_value_as_temp();
-        {
+        // 如果子节点都是常量, 则计算结果
+        if (l_val->value_ptr()->type == ValueAST::Type::Num &&
+            r_val->value_ptr()->type == ValueAST::Type::Num) {
+            int l = l_val->value_ptr()->number;
+            int r = r_val->value_ptr()->number;
+            int res;
+            switch (type) {
+                case Type::Add: res = l + r;        break;
+                case Type::Sub: res = l - r;        break;
+                case Type::Mul: res = l * r;        break;
+                case Type::Div: res = l / r;        break;
+                case Type::Mod: res = l % r;        break;
+                case Type::And: res = !!l && !!r;   break;
+                case Type::Or:  res = !!l || !!r;   break;
+                case Type::Xor: res = !!l ^ !!r;    break;
+                case Type::Eq:  res = l == r;       break;
+                case Type::Ne:  res = l != r;       break;
+                case Type::Lt:  res = l < r;        break;
+                case Type::Gt:  res = l > r;        break;
+                case Type::Lte: res = l <= r;       break;
+                case Type::Gte: res = l >= r;       break;
+                default:
+                    assert(false);
+            }
+            set_result(new ValueAST(res));
+        } else {
             // 当前逻辑下分析器不再逐步生成临时变量, 不应提前确定结果
             assert(!result);
             set_result(new ValueAST());
