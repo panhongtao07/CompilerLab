@@ -56,7 +56,7 @@ using namespace std;
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block
-%type <stmt_val> Decl ConstDecl ConstDef BlockItem Stmt
+%type <stmt_val> Decl ConstDecl VarDecl ConstDef VarDef BlockItem Stmt
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <exp_val> ConstInitVal ConstExp LVal
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
@@ -83,6 +83,7 @@ CompUnit
 
 Decl
     : ConstDecl
+    | VarDecl
     ;
 
 ConstDecl
@@ -106,6 +107,20 @@ ConstDef
 
 ConstInitVal
     : ConstExp      { $$ = const_cast<ValueAST*>($1->value_ptr()); }
+    ;
+
+VarDecl
+    : BType VarDef ';' { $$ = $2; }
+    ;
+
+VarDef
+    : IDENTIFIER    { $$ = new VarDeclAST(*$1); }
+    | VarDef ',' VarDef {
+        // 变量定义可能解释为多个语句, 如声明和赋值
+        // 使用push_back保证顺序正确
+        $1->push_back($3);
+        $$ = $1;
+    }
     ;
 
 // 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
