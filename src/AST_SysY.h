@@ -6,6 +6,8 @@
 #include <memory>
 #include <cassert>
 
+#define record_frame(T) 
+
 #define prepare_expr(expr) \
     do { \
         if (!(expr)->is_value()) { \
@@ -57,6 +59,7 @@ public:
 class CompUnitAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> func_def;
+    record_frame(CompUnitAST)
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "CU {" << *func_def << "}";
@@ -72,6 +75,8 @@ public:
     std::string identifier;
     std::unique_ptr<BaseAST> block;
 
+    record_frame(FuncDefAST)
+
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "FD {" << *func_type << ", " << identifier << ", " << *block
                  << "}";
@@ -85,6 +90,8 @@ public:
 class FuncTypeAST : public BaseAST {
 public:
     std::string identifier;
+
+    record_frame(FuncTypeAST)
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "FT {" << identifier << "}";
@@ -101,6 +108,8 @@ class BlockAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> statement;
 
+    record_frame(BlockAST)
+
     std::ostream& dump(std::ostream& o = std::cout) const override {
         return o << "B {" << *statement << "}";
     }
@@ -112,6 +121,7 @@ public:
 // 表达式的基类
 class ExpAST: public BaseAST {
 public:
+    record_frame(ExpAST)
     // 该类为单个值还是表达式
     virtual bool is_value() const {return false;}
     // 确定表达式结束后, 生成表达式及其子表达式的所有临时符号
@@ -134,6 +144,7 @@ public:
 
     ValueAST() : type(Type::Undef) {}
     ValueAST(int number) : type(Type::Num), number(number) {}
+    record_frame(ValueAST)
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         switch (type) {
@@ -209,6 +220,7 @@ public:
 
     // 在编译前, 由语义分析器设置包含结果在内的所有信息
     BinaryAST() : type(Type::Undef) {}
+    record_frame(BinaryAST)
 
     const std::string& get_type_str() const {
         return type_str[(int)type];
@@ -256,6 +268,8 @@ class StmtAST : public BaseAST {
 public:
     std::unique_ptr<StmtAST> next;
 
+    record_frame(StmtAST)
+
     // 将语句添加到链表末尾
     void push_back(StmtAST* stmt) {
         if (next) {
@@ -289,6 +303,7 @@ public:
 class ReturnAST : public StmtAST {
 public:
     define_expr_with_set_method(expr, set_expr, 1)
+    record_frame(ReturnAST)
 
     std::ostream& dump_this(std::ostream& o = std::cout) const override {
         if (expr) {
