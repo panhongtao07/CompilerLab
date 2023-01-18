@@ -3,6 +3,7 @@
 
 // 不写IDE报错很多，太难看了，还是写上吧
 #include <iostream>
+#include <unordered_map>
 #include <memory>
 #include <cassert>
 
@@ -15,14 +16,13 @@
         } \
     } while (0)
 
-// 方法设置表达式的值
-// 目前表达式暂只应被单指针指向, 因此创建新指针, 否则会导致多次释放
-// 共享指针只有在复制其它共享指针时才会增加引用计数, 从原始指针创建会导致独立计数
+// 方法设置表达式的值, 并同步共享指针表
+// final 的表达式不再具有父表达式, 解析到此结束, 会被设置为临时值并立刻计算
 #define set_method(expr, method_name, final, type) \
-    /* 用于设置表达式的值 */ \
+    /* 用于设置表达式的值, 并同步共享指针表 */ \
     void method_name(type* expr, bool _final = final) { \
         if (_final) expr->set_value_as_temp(); \
-        this->expr = ptr<type>(expr); \
+        this->expr = share_table->get_or_create<type>(expr); \
     }
 
 #define define_with_set_method(expr, method_name, final, type) \
@@ -36,12 +36,32 @@ class BaseAST;
 class ExpAST;
 class ValueAST;
 
+class SharedTable;
 namespace {
     template <typename T>
     using ptr = std::shared_ptr<T>;
 };
 
 inline int var_count = 0;
+// 共享指针表
+inline std::unique_ptr<SharedTable> share_table = std::make_unique<SharedTable>();
+
+// 管理类型的类
+// 表达式共享指针表，用于将 AST 中的指针替换为共享指针
+class SharedTable {
+private:
+    std::unordered_map<ExpAST*, ptr<ExpAST>> _table;
+public:
+    // 获取当前共享指针或创建
+    ptr<ExpAST> get_or_create(ExpAST* key);
+    // 获取当前共享指针或创建, 为什么不能在 cpp 定义呢?
+    template <typename T>
+    ptr<T> get_or_create(ExpAST* key)  {
+        auto result = get_or_create(key);
+        return std::reinterpret_pointer_cast<T>(result);
+    }
+};
+
 
 // 所有 AST 的基类
 class BaseAST {

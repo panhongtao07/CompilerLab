@@ -31,3 +31,14 @@ const std::string BinaryAST::op_str[] = {
     "==", "!=", "<", ">", "<=", ">=",
 };
 
+// 函数
+ptr<ExpAST> SharedTable::get_or_create(ExpAST* key) {
+    auto it = _table.find(key);
+    ptr<ExpAST> result;
+    if (it != _table.end()) {
+        result = it->second;
+    } else {
+        result = _table[key] = ptr<ExpAST>(key);
+    }
+    return result;
+}
