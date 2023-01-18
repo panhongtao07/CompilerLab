@@ -32,6 +32,8 @@
 #define define_expr_with_set_method(expr, method_name, final) \
     define_with_set_method(expr, method_name, final, ExpAST)
 
+#define USE_VAR_NAME 1
+
 class BaseAST;
 class ExpAST;
 class ValueAST;
@@ -167,9 +169,18 @@ public:
         Var,
     } type;
     int number;
+    // 变量名, 没有使用意义
+#if USE_VAR_NAME
+    std::string identifier;
+#endif
 
     ValueAST() : type(Type::Undef) {}
     ValueAST(int number) : type(Type::Num), number(number) {}
+#if USE_VAR_NAME
+    ValueAST(const std::string& identifier) : type(Type::Var), identifier(identifier) {}
+#else
+    ValueAST(const std::string& identifier) : type(Type::Var) {}
+#endif
     record_frame(ValueAST)
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
@@ -179,7 +190,11 @@ public:
             case Type::Temp:
                 return o << "T {" << number << "}";
             case Type::Var:
+            #if USE_VAR_NAME
+                return o << "V {" << identifier << number << "}";
+            #else
                 return o << "V {" << number << "}";
+            #endif
             default:
                 assert(false);
         }
@@ -190,6 +205,12 @@ public:
                 return o << number;
             case Type::Temp:
                 return o << "%" << number;
+            case Type::Var:
+            #if USE_VAR_NAME
+                return o << "@" << identifier;
+            #else
+                return o << "@v" << number;
+            #endif
             default:
                 assert(false);
         }
@@ -410,6 +431,11 @@ public:
 
     ConstDeclAST(const std::string& name, ValueAST* value) : name(name) {
         assert(value->type == ValueAST::Type::Num);
+#if USE_VAR_NAME
+        // 记录名称时, 生成新的 ValueAST, 并在其中记录名称
+        value = new ValueAST(value->number);
+        value->identifier = name;
+#endif
         set_var_and_sync(name, value);
     }
     record_frame(ConstDeclAST)
