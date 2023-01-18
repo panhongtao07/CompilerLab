@@ -31,9 +31,3 @@ const std::string BinaryAST::op_str[] = {
     "==", "!=", "<", ">", "<=", ">=",
 };
 
-
-void ExpAST::set_value_as_temp() {
-    if (is_value()) return;
-    if (set_value(new ValueAST())) return;
-    assert(false);
-}

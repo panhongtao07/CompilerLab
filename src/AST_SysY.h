@@ -13,25 +13,41 @@
         } \
     } while (0)
 
-#define define_expr_with_set_method(expr, method_name) \
-    std::shared_ptr<ExpAST> expr; \
-    void method_name(ExpAST* expr) { \
-        expr->set_value_as_temp(); \
-        this->expr = std::shared_ptr<ExpAST>(expr); \
+// 方法设置表达式的值
+// 目前表达式暂只应被单指针指向, 因此创建新指针, 否则会导致多次释放
+// 共享指针只有在复制其它共享指针时才会增加引用计数, 从原始指针创建会导致独立计数
+#define set_method(expr, method_name, final, type) \
+    /* 用于设置表达式的值 */ \
+    void method_name(type* expr, bool _final = final) { \
+        if (_final) expr->set_value_as_temp(); \
+        this->expr = ptr<type>(expr); \
     }
 
+#define define_with_set_method(expr, method_name, final, type) \
+    ptr<type> expr; \
+    set_method(expr, method_name, final, type)
 
-inline int var_count = 0;
+#define define_expr_with_set_method(expr, method_name, final) \
+    define_with_set_method(expr, method_name, final, ExpAST)
 
 class BaseAST;
 class ExpAST;
 class ValueAST;
 
+namespace {
+    template <typename T>
+    using ptr = std::shared_ptr<T>;
+};
+
+inline int var_count = 0;
+
 // 所有 AST 的基类
 class BaseAST {
 public:
     virtual ~BaseAST() = default;
+    // 打印 AST 的结构
     virtual std::ostream& dump(std::ostream& o = std::cout) const = 0;
+    // 编译 AST 并输出 Koopa IR
     virtual std::ostream& compile(std::ostream& o = std::cout) const = 0;
     friend std::ostream& operator<<(std::ostream& o, const BaseAST& a) {
         return a.compile(o);
@@ -98,17 +114,8 @@ class ExpAST: public BaseAST {
 public:
     // 该类为单个值还是表达式
     virtual bool is_value() const {return false;}
-    /* 设置表达式结果值为v，返回是否成功（可用于避免临时中间变量生成）
-       如果成功，应删除赋值语句
-       例如：语句 Identifier = Exp; 可实现为
-       return Assign(Identifier, Exp);
-       若能成功设置结果，可实现为
-       if (Exp->set_value(Identifier)) return Exp;
-    */
-    virtual bool set_value(const ValueAST* v) {return false;}
-    // 设置表达式结果值为v, 单个值不做任何操作
-    // 必须成功，否则报错
-    void set_value_as_temp();
+    // 确定表达式结束后, 生成表达式及其子表达式的所有临时符号
+    virtual void set_value_as_temp() = 0;
     // 获取表达式结果值
     virtual const ValueAST* value_ptr() const = 0;
 };
@@ -120,17 +127,20 @@ public:
         // 默认值：未定义
         Undef,
         Num,
+        Temp,
         Var,
     } type;
     int number;
 
-    ValueAST() : type(Type::Var), number(var_count++) {}
+    ValueAST() : type(Type::Undef) {}
     ValueAST(int number) : type(Type::Num), number(number) {}
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
         switch (type) {
             case Type::Num:
                 return o << number;
+            case Type::Temp:
+                return o << "T {" << number << "}";
             case Type::Var:
                 return o << "V {" << number << "}";
             default:
@@ -141,7 +151,7 @@ public:
         switch (type) {
             case Type::Num:
                 return o << number;
-            case Type::Var:
+            case Type::Temp:
                 return o << "%" << number;
             default:
                 assert(false);
@@ -150,6 +160,13 @@ public:
 
     bool is_value() const override {
         return true;
+    }
+
+    void set_value_as_temp() override {
+        if (type == Type::Undef) {
+            type = Type::Temp;
+            number = var_count++;
+        }
     }
 
     const ValueAST* value_ptr() const override {
@@ -186,9 +203,9 @@ public:
     const static std::string inst_str[];
     const static std::string op_str[];
 
-    define_expr_with_set_method(l_val, set_left)
-    define_expr_with_set_method(r_val, set_right)
-    std::shared_ptr<ValueAST> result;
+    define_expr_with_set_method(l_val, set_left, 0)
+    define_expr_with_set_method(r_val, set_right, 0)
+    define_with_set_method(result, set_result, 1, ValueAST)
 
     // 在编译前, 由语义分析器设置包含结果在内的所有信息
     BinaryAST() : type(Type::Undef) {}
@@ -209,6 +226,7 @@ public:
 
     std::ostream& compile(std::ostream& o = std::cout) const override {
         assert(type != Type::Undef);
+        assert(result);
         // 先生成子表达式
         prepare_expr(l_val);
         prepare_expr(r_val);
@@ -218,10 +236,14 @@ public:
         return o;
     }
 
-    bool set_value(const ValueAST* v) override {
-        if (result) return false;
-        result = std::make_shared<ValueAST>(*v);
-        return true;
+    void set_value_as_temp() override {
+        l_val->set_value_as_temp();
+        r_val->set_value_as_temp();
+        {
+            // 当前逻辑下分析器不再逐步生成临时变量, 不应提前确定结果
+            assert(!result);
+            set_result(new ValueAST());
+        }
     }
 
     const ValueAST* value_ptr() const override {
@@ -266,7 +288,7 @@ public:
 // 返回语句
 class ReturnAST : public StmtAST {
 public:
-    define_expr_with_set_method(expr, set_expr)
+    define_expr_with_set_method(expr, set_expr, 1)
 
     std::ostream& dump_this(std::ostream& o = std::cout) const override {
         if (expr) {
