@@ -40,11 +40,17 @@ class SharedTable;
 namespace {
     template <typename T>
     using ptr = std::shared_ptr<T>;
+    using Table = std::unordered_map<std::string, ValueAST*>;
 };
 
 inline int var_count = 0;
 // 共享指针表
 inline std::unique_ptr<SharedTable> share_table = std::make_unique<SharedTable>();
+// 符号表用于解析时记录符号, 帮助建立 AST 的连接, 编译时不使用
+inline std::unique_ptr<Table> symbol_table = std::make_unique<Table>();
+
+// 获取符号表中的变量，若不存在则返回空指针
+ValueAST* get_var(const std::string& name);
 
 // 管理类型的类
 // 表达式共享指针表，用于将 AST 中的指针替换为共享指针

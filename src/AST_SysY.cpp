@@ -32,6 +32,16 @@ const std::string BinaryAST::op_str[] = {
 };
 
 // 函数
+ValueAST* get_var(const std::string& name) {
+    assert(symbol_table);
+    auto it = symbol_table->find(name);
+    if (it == symbol_table->end()) {
+        return nullptr;
+    } else {
+        return it->second;
+    }
+}
+
 ptr<ExpAST> SharedTable::get_or_create(ExpAST* key) {
     auto it = _table.find(key);
     ptr<ExpAST> result;

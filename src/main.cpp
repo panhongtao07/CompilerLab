@@ -36,6 +36,7 @@ int main(int argc, const char *argv[]) {
     unique_ptr<BaseAST> ast;
     auto ret = yyparse(ast);
     assert(!ret);
+    symbol_table.release();
     share_table.release();
 
     // 使用 ss 可能导致更大的内存代价, 但能减少时间代价并防止输出不一致
