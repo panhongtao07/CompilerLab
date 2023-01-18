@@ -49,15 +49,16 @@ using namespace std;
 // lexer 返回的所有 token 种类的声明
 // <xxx> 表示该符号的返回值，对应于YYSTYPE的哪个属性，降低编写代价
 // 增加这个符号后，所有对该符号的访问自动修改为.xxx
-%token INT RETURN
+%token INT CONST RETURN
 %token <str_val> IDENTIFIER
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block
-%type <stmt_val> BlockItem Stmt
+%type <stmt_val> Decl ConstDecl ConstDef BlockItem Stmt
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
+%type <exp_val> ConstInitVal ConstExp LVal
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
 
 %%
@@ -78,6 +79,33 @@ CompUnit
         comp_unit->func_def = unique_ptr<BaseAST>($1);
         ast = move(comp_unit);
     }
+    ;
+
+Decl
+    : ConstDecl
+    ;
+
+ConstDecl
+    : CONST BType ConstDef ';' { $$ = $3; }
+    ;
+
+// 表达式暂不考虑 int 之外的类型, 无需记录类型
+BType
+    : INT
+    ;
+
+ConstDef
+    : IDENTIFIER '=' ConstInitVal {
+        $$ = new ConstDeclAST(*$1, const_cast<ValueAST*>($3->value_ptr()));
+    }
+    | ConstDef ',' ConstDef {
+        $1->next = unique_ptr<StmtAST>($3);
+        $$ = $1;
+    }
+    ;
+
+ConstInitVal
+    : ConstExp      { $$ = const_cast<ValueAST*>($1->value_ptr()); }
     ;
 
 // 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
@@ -111,6 +139,7 @@ Block
 
 BlockItem
     : Stmt          { $$ = $1; }
+    | Decl          { $$ = $1; }
     | BlockItem BlockItem {
         $1->push_back($2);
         $$ = $1;
@@ -129,8 +158,17 @@ Exp
     : LOrExp        { $$ = $1; }
     ;
 
+ConstExp
+    : Exp {
+        $1->set_value_as_temp();
+        assert($1->value_ptr()->type == ValueAST::Type::Num);
+        $$ = const_cast<ValueAST*>($1->value_ptr());
+    }
+    ;
+
 PrimaryExp
     : '(' Exp ')'   { $$ = $2; }
+    | LVal          { $$ = $1; }
     | Number        { $$ = $1; }
     ;
 
@@ -205,6 +243,12 @@ LOrExp
         return_binary(BinaryAST::Type::Ne, new ValueAST(0), $1, l);
         return_binary(BinaryAST::Type::Ne, new ValueAST(0), $4, r);
         return_binary(BinaryAST::Type::Or, l, r, $$);
+    }
+    ;
+
+LVal
+    : IDENTIFIER    {
+        $$ = get_var(*$1);
     }
     ;
 
