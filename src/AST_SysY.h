@@ -231,6 +231,36 @@ public:
 
 // 语句的基类
 class StmtAST : public BaseAST {
+public:
+    std::unique_ptr<StmtAST> next;
+
+    // 将语句添加到链表末尾
+    void push_back(StmtAST* stmt) {
+        if (next) {
+            next->push_back(stmt);
+        } else {
+            next.reset(stmt);
+        }
+    }
+
+    // 打印本语句的结构
+    virtual std::ostream& dump_this(std::ostream& o = std::cout) const = 0;
+    // 编译本语句并输出 Koopa IR
+    virtual std::ostream& compile_this(std::ostream& o = std::cout) const = 0;
+    std::ostream& dump(std::ostream& o = std::cout) const override final {
+        dump_this(o);
+        if (next) {
+            next->dump(o);
+        }
+        return o;
+    }
+    std::ostream& compile(std::ostream& o = std::cout) const override final {
+        compile_this(o);
+        if (next) {
+            next->compile(o);
+        }
+        return o;
+    }
 };
 
 // 返回语句
@@ -238,7 +268,7 @@ class ReturnAST : public StmtAST {
 public:
     define_expr_with_set_method(expr, set_expr)
 
-    std::ostream& dump(std::ostream& o = std::cout) const override {
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
         if (expr) {
             prepare_expr(expr);
             o << "return " << *expr->value_ptr() << ";";
@@ -247,7 +277,7 @@ public:
         }
         return o << "return " << *expr << ";";
     }
-    std::ostream& compile(std::ostream& o = std::cout) const override {
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
         if (expr) {
             prepare_expr(expr);
             o << "ret " << *expr->value_ptr() << std::endl;
