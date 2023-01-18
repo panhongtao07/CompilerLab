@@ -447,4 +447,19 @@ public:
         return o;
     }
 };
+
+// 变量声明语句
+class VarDeclAST : public DeclAST {
+public:
+    VarDeclAST(const std::string& name) {
+        set_var_and_sync(name, new ValueAST(name));
+    }
+    record_frame(VarDeclAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << "decl " << *var << ";";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        return o << *var << " = alloc i32" << std::endl;
+    }
+};
 #endif
