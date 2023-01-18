@@ -388,4 +388,37 @@ public:
     }
 };
 
+// 声明语句
+class DeclAST : public StmtAST {
+public:
+    define_with_set_method(var, set_var, 0, ValueAST)
+
+    record_frame(DeclAST)
+
+    // 设置属性值并同步到符号表和共享指针表, 符号表此前必须不存在该变量
+    void set_var_and_sync(const std::string& name, ValueAST* value) {
+        assert(!get_var(name));
+        set_var(value);
+        (*symbol_table)[name] = value;
+    }
+};
+
+// 常量声明语句
+class ConstDeclAST : public DeclAST {
+public:
+    std::string name;
+
+    ConstDeclAST(const std::string& name, ValueAST* value) : name(name) {
+        assert(value->type == ValueAST::Type::Num);
+        set_var_and_sync(name, value);
+    }
+    record_frame(ConstDeclAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << "const decl " << name << " = " << *var << ";";
+    }
+    // 常量被自动替换为值, 无需产生中间代码
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        return o;
+    }
+};
 #endif
