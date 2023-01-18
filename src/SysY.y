@@ -42,6 +42,7 @@ using namespace std;
     std::string *str_val;
     int int_val;
     BaseAST *ast_val;
+    StmtAST *stmt_val;
     ExpAST *exp_val;
 }
 
@@ -54,7 +55,8 @@ using namespace std;
 
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> FuncDef FuncType Block
+%type <stmt_val> BlockItem Stmt
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
 
@@ -100,10 +102,18 @@ FuncType
     ;
 
 Block
-    : '{' Stmt '}' {
+    : '{' BlockItem '}' {
         auto ast = new BlockAST();
         ast->statement = unique_ptr<BaseAST>($2);
         $$ = ast;
+    }
+    ;
+
+BlockItem
+    : Stmt          { $$ = $1; }
+    | BlockItem BlockItem {
+        $1->push_back($2);
+        $$ = $1;
     }
     ;
 
