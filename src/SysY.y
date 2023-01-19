@@ -58,7 +58,7 @@ using namespace std;
 %type <ast_val> FuncDef FuncType Block
 %type <stmt_val> Decl ConstDecl VarDecl ConstDef VarDef BlockItem Stmt
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
-%type <exp_val> ConstInitVal ConstExp LVal
+%type <exp_val> ConstInitVal InitVal ConstExp LVal
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
 
 %%
@@ -115,12 +115,23 @@ VarDecl
 
 VarDef
     : IDENTIFIER    { $$ = new VarDeclAST(*$1); }
+    | IDENTIFIER '=' InitVal {
+        auto decl = new VarDeclAST(*$1);
+        auto assign = new AssignAST(*$1);
+        assign->set_expr($3);
+        decl->next = unique_ptr<StmtAST>(assign);
+        $$ = decl;
+    }
     | VarDef ',' VarDef {
         // 变量定义可能解释为多个语句, 如声明和赋值
         // 使用push_back保证顺序正确
         $1->push_back($3);
         $$ = $1;
     }
+    ;
+
+InitVal
+    : Exp           { $$ = $1; }
     ;
 
 // 我们这里可以直接写 '(' 和 ')', 因为之前在 lexer 里已经处理了单个字符的情况
