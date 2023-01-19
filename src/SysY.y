@@ -178,6 +178,12 @@ Stmt
         ast->set_expr($2);
         $$ = ast;
     }
+    | Exp ';' {
+        auto ast = new ExpStmtAST();
+        ast->set_expr($1);
+        $$ = ast;
+    }
+    | ';'       { $$ = new ExpStmtAST(); }
     | LVal '=' Exp ';' {
         auto ast = new AssignAST();
         auto lval = reinterpret_cast<GetVarAST*>($1);

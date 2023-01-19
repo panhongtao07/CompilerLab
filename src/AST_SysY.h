@@ -439,6 +439,27 @@ public:
     }
 };
 
+// 表达式语句
+class ExpStmtAST : public StmtAST {
+public:
+    define_expr_with_set_method(expr, set_expr, 1)
+    record_frame(ExpStmtAST)
+
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        if (!expr) {
+            return o << ";";
+        }
+        prepare_expr(expr);
+        return o << *expr->value_ptr() << ";";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        if (expr) {
+            prepare_expr(expr);
+        }
+        return o;
+    }
+};
+
 // 声明语句
 class DeclAST : public StmtAST {
 public:
