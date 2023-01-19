@@ -263,7 +263,13 @@ LOrExp
 
 LVal
     : IDENTIFIER    {
-        $$ = get_var(*$1);
+        auto var = get_var(*$1);
+        assert(var != nullptr);
+        if (var->type == ValueAST::Type::Var) {
+            $$ = new GetVarAST(var);
+        } else {
+            $$ = var;
+        }
     }
     ;
 

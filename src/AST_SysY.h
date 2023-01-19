@@ -232,6 +232,36 @@ public:
     }
 };
 
+// 读取具名变量值
+// 由于 Koopa IR 不允许多赋值, 实际上是一个表达式而不是单值
+class GetVarAST : public ExpAST {
+public:
+    define_with_set_method(var, set_var, 0, ValueAST)
+    define_with_set_method(temp, set_res, 1, ValueAST)
+
+    GetVarAST(ValueAST* var) {
+        set_var(var);
+    }
+    record_frame(GetVarAST)
+
+    std::ostream& dump(std::ostream& o = std::cout) const override {
+        return o << "V.GET {" << *var << "->" << *temp << "}";
+    }
+
+    std::ostream& compile(std::ostream& o = std::cout) const override {
+        return o << *temp << " = load " << *var << std::endl;
+    }
+
+    void set_value_as_temp() override {
+        assert(!temp);
+        set_res(new ValueAST());
+    }
+
+    const ValueAST* value_ptr() const override {
+        return temp.get();
+    }
+};
+
 // 二元运算
 class BinaryAST : public ExpAST {
 public:
