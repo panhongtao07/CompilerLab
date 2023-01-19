@@ -492,4 +492,32 @@ public:
         return o << *var << " = alloc i32" << std::endl;
     }
 };
+
+// 赋值语句
+// 不支持数组时, 变量初始化语句可被解释为赋值语句
+class AssignAST : public StmtAST {
+public:
+    define_with_set_method(var, set_var, 0, ValueAST)
+    define_expr_with_set_method(expr, set_expr, 1)
+
+    AssignAST() = default;
+    AssignAST(const std::string& name) {
+        // 从符号表中获取变量, 不存在则报错
+        auto assign_var = get_var(name);
+        assert(assign_var);
+        set_var(assign_var);
+    }
+    record_frame(AssignAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << *var << " = " << *expr << ";";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        assert(var->type == ValueAST::Type::Var);
+        // 没有初始化值, 声明即结束, 不应有赋值语句
+        assert(expr);
+        prepare_expr(expr);
+        o << "store " << *expr->value_ptr() << ", " << *var << std::endl;
+        return o;
+    }
+};
 #endif
