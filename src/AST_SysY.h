@@ -45,7 +45,10 @@ namespace {
     using Table = std::unordered_map<std::string, ValueAST*>;
 };
 
+// 函数作用域中的变量数量, 拆分只是证明正确性, 实际上不需要
 inline int var_count = 0;
+// 临时变量数量, 用于生成临时变量名
+inline int tmp_count = 0;
 // 共享指针表
 inline std::unique_ptr<SharedTable> share_table = std::make_unique<SharedTable>();
 // 符号表用于解析时记录符号, 帮助建立 AST 的连接, 编译时不使用
@@ -183,9 +186,10 @@ public:
     ValueAST() : type(Type::Undef) {}
     ValueAST(int number) : type(Type::Num), number(number) {}
 #if USE_VAR_NAME
-    ValueAST(const std::string& identifier) : type(Type::Var), identifier(identifier) {}
+    ValueAST(const std::string& identifier) :
+        type(Type::Var), number(var_count++), identifier(identifier) {}
 #else
-    ValueAST(const std::string& identifier) : type(Type::Var) {}
+    ValueAST(const std::string& identifier) : type(Type::Var), number(var_count++) {}
 #endif
     record_frame(ValueAST)
 
@@ -213,7 +217,8 @@ public:
                 return o << "%" << number;
             case Type::Var:
             #if USE_VAR_NAME
-                return o << "@" << identifier;
+                // 添加后缀 _num 保证不重名
+                return o << "@" << identifier << "_" << number;
             #else
                 return o << "@v" << number;
             #endif
@@ -229,7 +234,7 @@ public:
     void set_value_as_temp() override {
         if (type == Type::Undef) {
             type = Type::Temp;
-            number = var_count++;
+            number = tmp_count++;
         }
     }
 
