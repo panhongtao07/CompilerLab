@@ -760,11 +760,20 @@ public:
 class LoopAST : public StmtAST {
 public:
     define_expr_with_set_method(cond, set_cond, 1)
+    // 初始化语句, 可以为空
+    std::unique_ptr<StmtAST> init;
     // 循环体语句
     std::unique_ptr<StmtAST> body;
+    // 循环体重复语句, 可以为空
+    std::unique_ptr<StmtAST> step;
 
     // while 循环构造函数
     LoopAST(ExpAST* cond, StmtAST* body) : body(body) {
+        set_cond(cond);
+    }
+    // for 循环构造函数
+    LoopAST(ExpAST* cond, StmtAST* init, StmtAST* body, StmtAST* step = nullptr)
+        : init(init), body(body), step(step) {
         set_cond(cond);
     }
     record_frame(LoopAST)
@@ -776,6 +785,9 @@ public:
     }
     std::ostream& compile_this(std::ostream& o = std::cout) const override {
         int label = label_count++;
+        if (init) {
+            o << *init;
+        }
         o << "jump %cond_" << label << std::endl;
         o << "%cond_" << label << ":" << std::endl;
         prepare_expr(cond);
@@ -783,6 +795,9 @@ public:
           << ", %end_" << label << std::endl;
         o << "%body_" << label << ":" << std::endl;
         o << *body;
+        if (step) {
+            o << *step;
+        }
         o << "jump %cond_" << label << std::endl;
         o << "%end_" << label << ":" << std::endl;
         return o;
