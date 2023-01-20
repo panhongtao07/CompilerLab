@@ -754,4 +754,38 @@ public:
         return o;
     }
 };
+
+// 循环语句
+// SysY支持的循环语句只有 while 循环, 为展示可扩展性同时支持 for 循环
+class LoopAST : public StmtAST {
+public:
+    define_expr_with_set_method(cond, set_cond, 1)
+    // 循环体语句
+    std::unique_ptr<StmtAST> body;
+
+    // while 循环构造函数
+    LoopAST(ExpAST* cond, StmtAST* body) : body(body) {
+        set_cond(cond);
+    }
+    record_frame(LoopAST)
+
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        o << "while (" << *cond << ") {" << std::endl;
+        o  << *body << std::endl;
+        return o << "}";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        int label = label_count++;
+        o << "jump %cond_" << label << std::endl;
+        o << "%cond_" << label << ":" << std::endl;
+        prepare_expr(cond);
+        o << "br " << *cond->value_ptr() << ", %body_" << label
+          << ", %end_" << label << std::endl;
+        o << "%body_" << label << ":" << std::endl;
+        o << *body;
+        o << "jump %cond_" << label << std::endl;
+        o << "%end_" << label << ":" << std::endl;
+        return o;
+    }
+};
 #endif

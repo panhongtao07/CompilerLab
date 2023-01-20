@@ -50,7 +50,7 @@ using namespace std;
 // lexer 返回的所有 token 种类的声明
 // <xxx> 表示该符号的返回值，对应于YYSTYPE的哪个属性，降低编写代价
 // 增加这个符号后，所有对该符号的访问自动修改为.xxx
-%token INT CONST IF ELSE RETURN
+%token INT CONST IF ELSE WHILE RETURN
 %token <str_val> IDENTIFIER
 %token <int_val> INT_CONST
 
@@ -197,6 +197,9 @@ MatchedStmt
     | RETURN ';'     { $$ = new ReturnAST(); }
     | IF '(' Exp ')' MatchedStmt ELSE MatchedStmt {
         $$ = new BranchAST($3, $5, $7);
+    }
+    | WHILE '(' Exp ')' Stmt {
+        $$ = new LoopAST($3, $5);
     }
     | Block     { $$ = new BlockStmtAST($1); }
     | Exp ';' {
