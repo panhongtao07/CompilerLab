@@ -367,6 +367,16 @@ public:
         if (result->type == ValueAST::Type::Num) {
             return o;
         }
+        // 如果可预处理, 则只生成部分子表达式
+        auto pre_type = preprocess_type();
+        if (pre_type == "left") {
+            prepare_expr(l_val);
+            return o;
+        }
+        if (pre_type == "right") {
+            prepare_expr(r_val);
+            return o;
+        }
         // 先生成子表达式
         prepare_expr(l_val);
         prepare_expr(r_val);
@@ -377,13 +387,77 @@ public:
     }
 
     void set_value_as_temp() override {
+        assert(!result);
         // 如果已经计算出常量, 返回
         if (result != nullptr && result->type == ValueAST::Type::Num) {
             return;
         }
         // 等待子节点计算常量
         l_val->set_value_as_temp();
+        auto pre_type = preprocess_type(1);
+        if (pre_type == "left") {
+            preprocess(pre_type);
+            return;
+        }
+        // 等待子节点计算常量
         r_val->set_value_as_temp();
+        if (preprocess(preprocess_type())) {
+            return;
+        }
+        normal_get_result();
+    }
+
+private:
+    // 是否是短路运算符
+    bool is_short_circuit() const {
+        return type == Type::And || type == Type::Or;
+    }
+
+    // 如果是短路运算符, 是否可以直接短路（左子节点已经计算出常量）
+    std::string preprocess_type(bool left_only = false) const {
+        if (!is_short_circuit()) {
+            return "";
+        }
+        if (l_val->value_ptr()->type == ValueAST::Type::Num) {
+            int l = l_val->value_ptr()->number;
+            if ((type == Type::And && !l) || (type == Type::Or && l)) {
+                return "left";
+            } else {
+                return "right";
+            }
+        }
+        if (left_only) {
+            return "";
+        }
+        if (r_val->value_ptr()->type == ValueAST::Type::Num) {
+            int r = r_val->value_ptr()->number;
+            if ((type == Type::And && !r) || (type == Type::Or && r)) {
+                return "right";
+            } else {
+                return "left";
+            }
+        }
+        return "";
+    }
+
+    // 根据短路运算符的类型, 计算并设置结果, 返回是否进行了预处理
+    bool preprocess(std::string pre_type) {
+        if (pre_type == "left") {
+            const_set_result(l_val->value_ptr());
+            return true;
+        }
+        if (pre_type == "right") {
+            const_set_result(r_val->value_ptr());
+            return true;
+        }
+        return false;
+    }
+
+    void const_set_result(const ValueAST* result) {
+        set_result(const_cast<ValueAST*>(result));
+    }
+
+    void normal_get_result() {
         // 如果子节点都是常量, 则计算结果
         if (l_val->value_ptr()->type == ValueAST::Type::Num &&
             r_val->value_ptr()->type == ValueAST::Type::Num) {
@@ -411,11 +485,11 @@ public:
             set_result(new ValueAST(res));
         } else {
             // 当前逻辑下分析器不再逐步生成临时变量, 不应提前确定结果
-            assert(!result);
             set_result(new ValueAST());
         }
     }
 
+public:
     const ValueAST* value_ptr() const override {
         return result.get();
     }
