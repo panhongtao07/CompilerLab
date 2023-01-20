@@ -601,4 +601,50 @@ public:
         return o;
     }
 };
+
+// 分支语句
+class BranchAST : public StmtAST {
+public:
+    define_expr_with_set_method(cond, set_cond, 1)
+    std::unique_ptr<StmtAST> then_stmt;
+    std::unique_ptr<StmtAST> else_stmt;
+
+    BranchAST(ExpAST* cond, StmtAST* then_stmt, StmtAST* else_stmt = nullptr)
+        : then_stmt(then_stmt), else_stmt(else_stmt) {
+        set_cond(cond);
+    }
+    record_frame(BranchAST)
+
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        o << "if (" << *cond << ") {" << std::endl;
+        o << "then " << *then_stmt << std::endl;
+        if (else_stmt) {
+            o << "else " << *else_stmt << std::endl;
+        }
+        return o << "}";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        prepare_expr(cond);
+        int label = label_count++;
+        if (!else_stmt) {
+            o << "br " << *cond->value_ptr() << ", %then_" << label
+              << ", %end_" << label << std::endl;
+            o << "%then_" << label << ":" << std::endl;
+            o << *then_stmt;
+            o << "jump %end_" << label << std::endl;
+            o << "%end_" << label << ":" << std::endl;
+        } else {
+            o << "br " << *cond->value_ptr() << ", %then_" << label
+              << ", %else_" << label << std::endl;
+            o << "%then_" << label << ":" << std::endl;
+            o << *then_stmt;
+            o << "jump %end_" << label << std::endl;
+            o << "%else_" << label << ":" << std::endl;
+            o << *else_stmt;
+            o << "jump %end_" << label << std::endl;
+            o << "%end_" << label << ":" << std::endl;
+        }
+        return o;
+    }
+};
 #endif
