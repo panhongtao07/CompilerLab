@@ -189,6 +189,7 @@ Stmt
         ast->set_expr($2);
         $$ = ast;
     }
+    | RETURN ';'     { $$ = new ReturnAST(); }
     | Block     { $$ = new BlockStmtAST($1); }
     | Exp ';' {
         auto ast = new ExpStmtAST();

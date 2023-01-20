@@ -47,6 +47,8 @@ namespace {
     using Table = std::unordered_map<std::string, ValueAST*>;
 };
 
+// 标签和基本块计数, 用于防止重复标签和基本块名
+inline int label_count = 0;
 // 函数作用域中的变量数量, 拆分只是证明正确性, 实际上不需要
 inline int var_count = 0;
 // 临时变量数量, 用于生成临时变量名
@@ -145,7 +147,8 @@ public:
     std::ostream& compile(std::ostream& o = std::cout) const override {
         o << "fun @" << identifier << *func_type << " {" << std::endl;
         o << "%entry:" << std::endl;
-        return o << *block << "}" << std::endl;
+        // 基本块必须有结尾指令, 自动添加不可触及的 ret 指令
+        return o << *block << "ret" << std::endl << "}" << std::endl;
     }
 };
 
@@ -476,7 +479,9 @@ public:
         } else {
             o << "ret" << std::endl;
         }
-        return o;
+        // 每个基本块必须恰有一个结束语句, 但是在语法分析阶段无法确定是否存在
+        // ret语句后的指令不应该被执行, 因此在编译阶段插入一个不可达的基本块
+        return o << "%unreachable_" << label_count++ << ":" << std::endl;
     }
 };
 
