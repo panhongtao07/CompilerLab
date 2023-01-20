@@ -292,7 +292,7 @@ LOrExp
 
 LVal
     : IDENTIFIER    {
-        auto var = get_var(*$1);
+        auto var = symbol_table->get_var(*$1);
         assert(var != nullptr);
         if (var->type == ValueAST::Type::Var) {
             $$ = new GetVarAST(var);

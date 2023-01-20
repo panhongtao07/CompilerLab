@@ -39,6 +39,8 @@ class ExpAST;
 class ValueAST;
 
 class SharedTable;
+class SymbolTable;
+class DomainGuard;
 namespace {
     template <typename T>
     using ptr = std::shared_ptr<T>;
@@ -52,10 +54,8 @@ inline int tmp_count = 0;
 // 共享指针表
 inline std::unique_ptr<SharedTable> share_table = std::make_unique<SharedTable>();
 // 符号表用于解析时记录符号, 帮助建立 AST 的连接, 编译时不使用
-inline std::unique_ptr<Table> symbol_table = std::make_unique<Table>();
-
-// 获取符号表中的变量，若不存在则返回空指针
-ValueAST* get_var(const std::string& name);
+// 不记录全局变量时, 可将符号表设置为空以验证正确性
+inline std::unique_ptr<SymbolTable> symbol_table = std::make_unique<SymbolTable>();
 
 // 管理类型的类
 // 表达式共享指针表，用于将 AST 中的指针替换为共享指针
@@ -71,6 +71,24 @@ public:
         auto result = get_or_create(key);
         return std::reinterpret_pointer_cast<T>(result);
     }
+};
+
+// 符号表，用于记录变量的类型并保存上级符号表入口
+class SymbolTable {
+private:
+    Table _table;
+    std::unique_ptr<SymbolTable> _parent;
+public:
+    // 创建新的符号表
+    SymbolTable() = default;
+    // 根据上级符号表的唯一指针创建新的符号表
+    SymbolTable(std::unique_ptr<SymbolTable>&& parent): _parent(std::move(parent)) {}
+    // 获取上级符号表的唯一指针右值引用, 用于恢复原来的符号表
+    std::unique_ptr<SymbolTable>&& get_parent() { return std::move(_parent); }
+    // 获取符号表中的变量, 若不存在则返回空指针, 默认递归查询上级符号表
+    ValueAST* get_var(const std::string& name, bool recursive = true);
+    // 设置符号表中的变量
+    void set_var(const std::string& name, ValueAST* value) { _table[name] = value; }
 };
 
 
@@ -494,9 +512,9 @@ public:
 
     // 设置属性值并同步到符号表和共享指针表, 符号表此前必须不存在该变量
     void set_var_and_sync(const std::string& name, ValueAST* value) {
-        assert(!get_var(name));
+        assert(!symbol_table->get_var(name, false));
         set_var(value);
-        (*symbol_table)[name] = value;
+        symbol_table->set_var(name, value);
     }
 };
 
@@ -549,7 +567,7 @@ public:
     AssignAST() = default;
     AssignAST(const std::string& name) {
         // 从符号表中获取变量, 不存在则报错
-        auto assign_var = get_var(name);
+        auto assign_var = symbol_table->get_var(name);
         assert(assign_var);
         set_var(assign_var);
     }

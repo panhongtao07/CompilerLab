@@ -32,16 +32,6 @@ const std::string BinaryAST::op_str[] = {
 };
 
 // 函数
-ValueAST* get_var(const std::string& name) {
-    assert(symbol_table);
-    auto it = symbol_table->find(name);
-    if (it == symbol_table->end()) {
-        return nullptr;
-    } else {
-        return it->second;
-    }
-}
-
 ptr<ExpAST> SharedTable::get_or_create(ExpAST* key) {
     auto it = _table.find(key);
     ptr<ExpAST> result;
@@ -51,4 +41,17 @@ ptr<ExpAST> SharedTable::get_or_create(ExpAST* key) {
         result = _table[key] = ptr<ExpAST>(key);
     }
     return result;
+}
+
+ValueAST* SymbolTable::get_var(const std::string& name, bool recursive) {
+    auto it = _table.find(name);
+    if (it == _table.end()) {
+        if (recursive && _parent) {
+            return _parent->get_var(name);
+        } else {
+            return nullptr;
+        }
+    } else {
+        return it->second;
+    }
 }
