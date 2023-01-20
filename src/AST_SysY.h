@@ -466,6 +466,20 @@ public:
     }
 };
 
+// 语句块语句
+class BlockStmtAST : public StmtAST {
+public:
+    std::unique_ptr<BaseAST> block;
+    BlockStmtAST(BaseAST* block) : block(block) {}
+    record_frame(BlockStmtAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << *block;
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        return o << *block;
+    }
+};
+
 // 声明语句
 class DeclAST : public StmtAST {
 public:
