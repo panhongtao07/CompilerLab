@@ -377,6 +377,10 @@ public:
             prepare_expr(r_val);
             return o;
         }
+        // 短路运算符生成短路代码
+        if (is_short_circuit()) {
+            return compile_short_circuit(o);
+        }
         // 先生成子表达式
         prepare_expr(l_val);
         prepare_expr(r_val);
@@ -487,6 +491,35 @@ private:
             // 当前逻辑下分析器不再逐步生成临时变量, 不应提前确定结果
             set_result(new ValueAST());
         }
+    }
+
+    std::ostream& compile_short_circuit(std::ostream& o) const {
+        assert(is_short_circuit());
+        int label = label_count++;
+        // 使用@_t(x)和%_t(x)作为临时变量, 以避免与用户变量冲突
+        // 常规全局变量名为@..._(x), 临时变量名为%(x)
+        o << "@_t" << label << " = alloc i32" << std::endl;
+        prepare_expr(l_val);
+        o << "br " << *l_val->value_ptr();
+        if (type == Type::And) {
+            o << ", %normal_" << label << ", %short_" << label << std::endl;
+        } else {
+            o << ", %short_" << label << ", %normal_" << label << std::endl;
+        }
+        o << "%short_" << label << ":" << std::endl;
+        if (type == Type::And) {
+            o << "store 0, @_t" << label << std::endl;
+        } else {
+            o << "store 1, @_t" << label << std::endl;
+        }
+        o << "jump %end_" << label << std::endl;
+        o << "%normal_" << label << ":" << std::endl;
+        prepare_expr(r_val);
+        o << "store " << *r_val->value_ptr() << ", @_t" << label << std::endl;
+        o << "jump %end_" << label << std::endl;
+        o << "%end_" << label << ":" << std::endl;
+        o << *result << " = load @_t" << label << std::endl;
+        return o;
     }
 
 public:
