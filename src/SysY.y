@@ -50,14 +50,14 @@ using namespace std;
 // lexer 返回的所有 token 种类的声明
 // <xxx> 表示该符号的返回值，对应于YYSTYPE的哪个属性，降低编写代价
 // 增加这个符号后，所有对该符号的访问自动修改为.xxx
-%token INT CONST RETURN
+%token INT CONST IF ELSE RETURN
 %token <str_val> IDENTIFIER
 %token <int_val> INT_CONST
 
 // 非终结符的类型定义
 // 具有返回类型的似乎必须声明type，意义同token部分
 %type <ast_val> FuncDef FuncType Block
-%type <stmt_val> Decl ConstDecl VarDecl ConstDef VarDef BlockItem Stmt
+%type <stmt_val> Decl ConstDecl VarDecl ConstDef VarDef BlockItem Stmt MatchedStmt OpenStmt
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <exp_val> ConstInitVal InitVal ConstExp LVal
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
@@ -184,12 +184,20 @@ BlockItem
     ;
 
 Stmt
+    : MatchedStmt   { $$ = $1; }
+    | OpenStmt      { $$ = $1; }
+    ;
+
+MatchedStmt
     : RETURN Exp ';' {
         auto ast = new ReturnAST();
         ast->set_expr($2);
         $$ = ast;
     }
     | RETURN ';'     { $$ = new ReturnAST(); }
+    | IF '(' Exp ')' MatchedStmt ELSE MatchedStmt {
+        $$ = new BranchAST($3, $5, $7);
+    }
     | Block     { $$ = new BlockStmtAST($1); }
     | Exp ';' {
         auto ast = new ExpStmtAST();
@@ -204,6 +212,15 @@ Stmt
         ast->set_expr($3);
         delete lval;
         $$ = ast;
+    }
+    ;
+
+OpenStmt
+    : IF '(' Exp ')' MatchedStmt ELSE OpenStmt {
+        $$ = new BranchAST($3, $5, $7);
+    }
+    | IF '(' Exp ')' Stmt {
+        $$ = new BranchAST($3, $5);
     }
     ;
 
