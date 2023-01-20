@@ -808,4 +808,32 @@ public:
         return o;
     }
 };
+
+// break 语句
+class BreakAST : public StmtAST {
+public:
+    BreakAST() = default;
+    record_frame(BreakAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << "break;";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        o << "jump %end_" << nearest_loop << std::endl;
+        return o << "%unreachable_" << label_count++ << ":" << std::endl;
+    }
+};
+
+// continue 语句
+class ContinueAST : public StmtAST {
+public:
+    ContinueAST() = default;
+    record_frame(ContinueAST)
+    std::ostream& dump_this(std::ostream& o = std::cout) const override {
+        return o << "continue;";
+    }
+    std::ostream& compile_this(std::ostream& o = std::cout) const override {
+        o << "jump %cond_" << nearest_loop << std::endl;
+        return o << "%unreachable_" << label_count++ << ":" << std::endl;
+    }
+};
 #endif
