@@ -161,6 +161,9 @@ Block
         ast->statement = unique_ptr<BaseAST>($2);
         $$ = ast;
     }
+    | '{' '}'       {
+        $$ = new BlockAST();
+    }
     ;
 
 BlockItem

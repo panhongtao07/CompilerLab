@@ -111,6 +111,7 @@ public:
     }
     std::ostream& compile(std::ostream& o = std::cout) const override {
         o << "fun @" << identifier << *func_type << " {" << std::endl;
+        o << "%entry:" << std::endl;
         return o << *block << "}" << std::endl;
     }
 };
@@ -139,10 +140,15 @@ public:
     record_frame(BlockAST)
 
     std::ostream& dump(std::ostream& o = std::cout) const override {
-        return o << "B {" << *statement << "}";
+        if (statement)
+            return o << "B {" << *statement << "}";
+        else
+            return o << "B {}";
     }
     std::ostream& compile(std::ostream& o = std::cout) const override {
-        return o << "%entry:" << std::endl << *statement;
+        if (!statement)
+            return o;
+        return o << *statement;
     }
 };
 
