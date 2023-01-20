@@ -53,6 +53,8 @@ inline int label_count = 0;
 inline int var_count = 0;
 // 临时变量数量, 用于生成临时变量名
 inline int tmp_count = 0;
+// 最近循环记录, 用于break和continue生成标签名, 负数是非法标签名
+inline int nearest_loop = -1;
 // 共享指针表
 inline std::unique_ptr<SharedTable> share_table = std::make_unique<SharedTable>();
 // 符号表用于解析时记录符号, 帮助建立 AST 的连接, 编译时不使用
@@ -788,6 +790,8 @@ public:
         if (init) {
             o << *init;
         }
+        int last_nearest = nearest_loop;
+        nearest_loop = label;
         o << "jump %cond_" << label << std::endl;
         o << "%cond_" << label << ":" << std::endl;
         prepare_expr(cond);
@@ -800,6 +804,7 @@ public:
         }
         o << "jump %cond_" << label << std::endl;
         o << "%end_" << label << ":" << std::endl;
+        nearest_loop = last_nearest;
         return o;
     }
 };
