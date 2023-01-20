@@ -39,6 +39,9 @@ public:
     void Compile(const koopa_raw_value_t &);
 
     void CompileReturn(const koopa_raw_value_t &);
+    void CompileAlloc(const koopa_raw_value_t &);
+    void CompileLoad(const koopa_raw_value_t &);
+    void CompileStore(const koopa_raw_value_t &);
     void CompileBinary(const koopa_raw_value_t &);
 };
 

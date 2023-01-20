@@ -87,6 +87,10 @@ void KoopaParser::Visit(const koopa_raw_value_t &value) {
             Visit(kind.data.binary.rhs);
             indent_level -= 2;
             break;
+        case KOOPA_RVT_GLOBAL_ALLOC:
+            // 全局变量分配指令
+            OUT << "Global alloc " << real_name(value) << std::endl;
+            break;
         default:
             // 其他类型暂时遇不到
             assert(false);
@@ -254,6 +258,19 @@ void KoopaParser::Compile(const koopa_raw_value_t &value) {
             // 二元指令
             CompileBinary(value);
             break;
+        case KOOPA_RVT_ALLOC:
+        case KOOPA_RVT_GLOBAL_ALLOC:
+            // 分配指令
+            CompileAlloc(value);
+            break;
+        case KOOPA_RVT_LOAD:
+            // 加载指令
+            CompileLoad(value);
+            break;
+        case KOOPA_RVT_STORE:
+            // 存储指令
+            CompileStore(value);
+            break;
         default:
             // 其他类型暂时遇不到
             debug(kind.tag);
@@ -270,6 +287,40 @@ void KoopaParser::CompileReturn(const koopa_raw_value_t &value) {
     }
     o << "addi sp, sp, " << stack_length << std::endl;
     o << "ret" << std::endl;
+}
+
+void KoopaParser::CompileAlloc(const koopa_raw_value_t &value) {
+    debug("CompileAlloc");
+    /*
+    const koopa_raw_value_kind_t &kind = value->kind;
+    auto &alloc = kind.data.global_alloc;
+    auto &init = alloc.init;
+    if (init) {
+        load_value(init, "t0");
+        store_value(value, "t0");
+    } else {
+        assert(false);
+    }
+    */
+}
+
+void KoopaParser::CompileLoad(const koopa_raw_value_t &value) {
+    debug("CompileLoad");
+    const koopa_raw_value_kind_t &kind = value->kind;
+    auto &load = kind.data.load;
+    auto &ptr = load.src;
+    load_value(ptr, "t0");
+    store_value(value, "t0");
+}
+
+void KoopaParser::CompileStore(const koopa_raw_value_t &value) {
+    debug("CompileStore");
+    const koopa_raw_value_kind_t &kind = value->kind;
+    auto &store = kind.data.store;
+    auto &ptr = store.dest;
+    auto &src = store.value;
+    load_value(src, "t0");
+    store_value(ptr, "t0");
 }
 
 void KoopaParser::CompileBinary(const koopa_raw_value_t &value) {
