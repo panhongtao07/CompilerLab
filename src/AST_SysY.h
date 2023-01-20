@@ -91,6 +91,18 @@ public:
     void set_var(const std::string& name, ValueAST* value) { _table[name] = value; }
 };
 
+// 作用域管理器
+// 用于记录作用域，构造时创建新的符号表，析构时恢复原来的符号表
+class DomainGuard {
+public:
+    DomainGuard() {
+        symbol_table = std::make_unique<SymbolTable>(std::move(symbol_table));
+    }
+    ~DomainGuard() {
+        symbol_table = symbol_table->get_parent();
+    }
+};
+
 
 // 所有 AST 的基类
 class BaseAST {

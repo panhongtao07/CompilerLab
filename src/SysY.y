@@ -44,6 +44,7 @@ using namespace std;
     BaseAST *ast_val;
     StmtAST *stmt_val;
     ExpAST *exp_val;
+    DomainGuard* guard_val;
 }
 
 // lexer 返回的所有 token 种类的声明
@@ -60,6 +61,7 @@ using namespace std;
 %type <exp_val> Exp PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <exp_val> ConstInitVal InitVal ConstExp LVal
 %type <int_val> UnaryOp MulOp AddOp RelOp EqOp
+%type <guard_val> DomainBegin
 
 %%
 
@@ -156,15 +158,21 @@ FuncType
     ;
 
 Block
-    : '{' BlockItem '}' {
+    : '{' DomainBegin BlockItem '}' {
+        // 块的作用域结束后, 自动销毁作用域
+        auto guard = unique_ptr<DomainGuard>($2);
         auto ast = new BlockAST();
-        ast->statement = unique_ptr<BaseAST>($2);
+        ast->statement = unique_ptr<BaseAST>($3);
         $$ = ast;
     }
     | '{' '}'       {
         $$ = new BlockAST();
     }
     ;
+
+DomainBegin : {
+        $$ = new DomainGuard();
+    };
 
 BlockItem
     : Stmt          { $$ = $1; }
