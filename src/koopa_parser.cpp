@@ -237,6 +237,8 @@ void KoopaParser::Compile(const koopa_raw_function_t &func) {
 
 // 基本块
 void KoopaParser::Compile(const koopa_raw_basic_block_t &bb) {
+    // 标记基本块入口
+    o << real_name(bb) << ":" << std::endl;
     // 编译所有指令
     Compile(bb->insts);
 }
@@ -270,6 +272,14 @@ void KoopaParser::Compile(const koopa_raw_value_t &value) {
         case KOOPA_RVT_STORE:
             // 存储指令
             CompileStore(value);
+            break;
+        case KOOPA_RVT_JUMP:
+            // 跳转指令
+            o << "j " << real_name(kind.data.jump.target) << std::endl;
+            break;
+        case KOOPA_RVT_BRANCH:
+            // 分支指令
+            CompileBranch(value);
             break;
         default:
             // 其他类型暂时遇不到
@@ -321,6 +331,18 @@ void KoopaParser::CompileStore(const koopa_raw_value_t &value) {
     auto &src = store.value;
     load_value(src, "t0");
     store_value(ptr, "t0");
+}
+
+void KoopaParser::CompileBranch(const koopa_raw_value_t &value) {
+    debug("CompileBranch");
+    const koopa_raw_value_kind_t &kind = value->kind;
+    auto &branch = kind.data.branch;
+    auto &cond = branch.cond;
+    auto &fbb = branch.false_bb;
+    auto &tbb = branch.true_bb;
+    load_value(cond, "t0");
+    o << "beqz t0, " << real_name(fbb) << std::endl;
+    o << "j " << real_name(tbb) << std::endl;
 }
 
 void KoopaParser::CompileBinary(const koopa_raw_value_t &value) {
